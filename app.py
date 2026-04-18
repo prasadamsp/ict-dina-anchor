@@ -278,12 +278,11 @@ tab_charts, tab_liq, tab_gaps, tab_cor, tab_imb = st.tabs([
 ])
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TAB 1 — CHARTS  (TradingView 15m + levels/FVG panels below)
+# TAB 1 — CHARTS  (Plotly 15m candles + EQH/EQL + FVG overlaid)
 # ─────────────────────────────────────────────────────────────────────────────
 with tab_charts:
     col_left, col_right = st.columns(2)
     for idx, key in enumerate(inst_order):
-        sym   = TV_SYMBOLS.get(key, "")
         cfg   = SYMBOLS[key]
         q     = quotes.get(key, {})
         price = q.get("price", 0)
