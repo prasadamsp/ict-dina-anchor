@@ -1,10 +1,11 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import numpy as np
 import plotly.graph_objects as go
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 
-from lib.market_data import SYMBOLS, get_candles, get_quotes
+from lib.market_data import SYMBOLS, TV_SYMBOLS, get_candles, get_quotes
 from lib.ict_analysis import (
     get_session, find_equal_hl, detect_gap_fib,
     find_imbalances, find_fvg, pearson, returns, who_leads
@@ -278,24 +279,51 @@ tab_charts, tab_liq, tab_gaps, tab_cor, tab_imb = st.tabs([
 ])
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TAB 1 — CHARTS  (Plotly 15m candles + EQH/EQL + FVG overlaid)
+# TAB 1 — CHARTS  (TradingView 15m + levels/FVG panels below)
 # ─────────────────────────────────────────────────────────────────────────────
 with tab_charts:
     col_left, col_right = st.columns(2)
     for idx, key in enumerate(inst_order):
+        sym   = TV_SYMBOLS.get(key, "")
         cfg   = SYMBOLS[key]
         q     = quotes.get(key, {})
         price = q.get("price", 0)
         dec   = cfg["decimals"]
 
+        # Full HTML document — tv.js loaded synchronously so TradingView global
+        # is available when the second script block runs.
+        tv_html = f"""<!DOCTYPE html>
+<html><head>
+<style>
+  html,body{{margin:0;padding:0;background:#080810;overflow:hidden}}
+  #chart{{width:100%;height:500px}}
+</style>
+</head><body>
+<div id="chart"></div>
+<script src="https://s3.tradingview.com/tv.js"></script>
+<script>
+new TradingView.widget({{
+  container_id: "chart",
+  autosize: true,
+  symbol: "{sym}",
+  interval: "15",
+  timezone: "America/New_York",
+  theme: "dark",
+  style: "1",
+  locale: "en",
+  toolbar_bg: "#080810",
+  hide_top_toolbar: false,
+  allow_symbol_change: false,
+  save_image: false
+}});
+</script>
+</body></html>"""
+
         with (col_left if idx % 2 == 0 else col_right):
-            st.markdown(f"**{cfg['label']}** — 15m")
+            st.markdown(f"**{cfg['label']}**")
+            components.html(tv_html, height=505, scrolling=False)
             if price > 0:
-                st.plotly_chart(make_chart(key, price, dec),
-                                use_container_width=True, config={"displayModeBar": False})
                 render_levels_fvg(key, price, dec)
-            else:
-                st.warning("No price data")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB 2 — LIQUIDITY
