@@ -1,14 +1,80 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import numpy as np
+import plotly.graph_objects as go
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 
-from lib.market_data import SYMBOLS, TV_SYMBOLS, get_candles, get_quotes
+from lib.market_data import SYMBOLS, get_candles, get_quotes
 from lib.ict_analysis import (
     get_session, find_equal_hl, detect_gap_fib,
     find_imbalances, find_fvg, pearson, returns, who_leads
 )
+
+def make_chart(key: str, price: float, dec: int) -> go.Figure:
+    cfg = SYMBOLS[key]
+    df  = get_candles(cfg["yahoo"], "15m", "5d")
+    if df.empty:
+        fig = go.Figure()
+        fig.add_annotation(text="No data", x=0.5, y=0.5, showarrow=False,
+                           font=dict(color="#9ca3af", size=16))
+        fig.update_layout(paper_bgcolor="#080810", plot_bgcolor="#080810", height=480)
+        return fig
+
+    df15 = df
+    df1h = get_candles(cfg["yahoo"], "1h", "15d")
+
+    levels = find_equal_hl(df15, "15m", price) + find_equal_hl(df1h, "1h", price)
+    levels.sort(key=lambda x: x["dist_pct"])
+    levels = levels[:8]
+
+    fvgs = find_fvg(df15, "15m", price) + find_fvg(df1h, "1h", price)
+    fvgs.sort(key=lambda x: x["dist_pct"])
+    fvgs = fvgs[:6]
+
+    fig = go.Figure()
+
+    # FVG shading (behind candles)
+    for f in fvgs:
+        color = "rgba(34,197,94,0.08)" if f["type"] == "bull" else "rgba(239,68,68,0.08)"
+        border = "rgba(34,197,94,0.3)" if f["type"] == "bull" else "rgba(239,68,68,0.3)"
+        fig.add_hrect(y0=f["lo"], y1=f["hi"],
+                      fillcolor=color, line=dict(color=border, width=1), layer="below")
+
+    # Candlesticks
+    fig.add_trace(go.Candlestick(
+        x=df.index, open=df["Open"], high=df["High"], low=df["Low"], close=df["Close"],
+        increasing=dict(fillcolor="#22c55e", line=dict(color="#22c55e", width=1)),
+        decreasing=dict(fillcolor="#ef4444", line=dict(color="#ef4444", width=1)),
+        name=cfg["label"], showlegend=False,
+    ))
+
+    # EQH/EQL lines
+    for lv in levels:
+        col = "#ef4444" if lv["type"] == "EQH" else "#22c55e"
+        fig.add_hline(y=lv["price"], line=dict(color=col, width=1, dash="dot"),
+                      annotation_text=f"{lv['type']} {lv['timeframe']}",
+                      annotation_font=dict(color=col, size=10),
+                      annotation_position="right")
+
+    # Current price line
+    fig.add_hline(y=price, line=dict(color="#f59e0b", width=1.5, dash="dash"))
+
+    fig.update_layout(
+        height=480,
+        paper_bgcolor="#080810",
+        plot_bgcolor="#0d0d1a",
+        margin=dict(l=10, r=80, t=10, b=10),
+        xaxis=dict(
+            showgrid=True, gridcolor="#1e1e32", color="#6b7280",
+            rangeslider=dict(visible=False),
+            type="category", tickangle=-45,
+            nticks=10,
+        ),
+        yaxis=dict(showgrid=True, gridcolor="#1e1e32", color="#6b7280",
+                   tickformat=f".{dec}f", side="right"),
+        hoverlabel=dict(bgcolor="#0f0f1a", font_color="#e2e2f0"),
+    )
+    return fig
 
 st.set_page_config(
     page_title="ICT Dina Anchor",
@@ -212,48 +278,24 @@ tab_charts, tab_liq, tab_gaps, tab_cor, tab_imb = st.tabs([
 ])
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TAB 1 — CHARTS  (with inline liquidity + FVG panels)
+# TAB 1 — CHARTS  (Plotly 15m candles + EQH/EQL + FVG overlaid)
 # ─────────────────────────────────────────────────────────────────────────────
 with tab_charts:
     col_left, col_right = st.columns(2)
     for idx, key in enumerate(inst_order):
-        sym   = TV_SYMBOLS[key]
         cfg   = SYMBOLS[key]
         q     = quotes.get(key, {})
         price = q.get("price", 0)
         dec   = cfg["decimals"]
 
-        widget_html = f"""
-        <div id="tv_{key}" style="width:100%;height:520px;border-radius:10px 10px 0 0;overflow:hidden"></div>
-        <script type="text/javascript">
-        (function() {{
-          var s = document.createElement('script');
-          s.src = 'https://s3.tradingview.com/tv.js';
-          s.onload = function() {{
-            new TradingView.widget({{
-              "container_id": "tv_{key}",
-              "autosize": true,
-              "symbol": "{sym}",
-              "interval": "15",
-              "timezone": "America/New_York",
-              "theme": "dark",
-              "style": "1",
-              "locale": "en",
-              "toolbar_bg": "#080810",
-              "hide_top_toolbar": false,
-              "allow_symbol_change": false,
-              "save_image": false
-            }});
-          }};
-          document.head.appendChild(s);
-        }})();
-        </script>"""
-
         with (col_left if idx % 2 == 0 else col_right):
-            st.markdown(f"**{cfg['label']}**")
-            components.html(widget_html, height=525)
+            st.markdown(f"**{cfg['label']}** — 15m")
             if price > 0:
+                st.plotly_chart(make_chart(key, price, dec),
+                                use_container_width=True, config={"displayModeBar": False})
                 render_levels_fvg(key, price, dec)
+            else:
+                st.warning("No price data")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB 2 — LIQUIDITY
