@@ -199,6 +199,46 @@ def pearson(a: np.ndarray, b: np.ndarray) -> float:
 def returns(closes: np.ndarray) -> np.ndarray:
     return np.diff(closes) / closes[:-1]
 
+# ── Fair Value Gaps ───────────────────────────────────────────────────────────
+
+def find_fvg(df: pd.DataFrame, timeframe: str, current_price: float) -> list:
+    """3-candle FVG: gap between candle[i-2] wick and candle[i] wick."""
+    if df.empty or len(df) < 3:
+        return []
+
+    fvgs = []
+    for i in range(2, len(df)):
+        c1 = df.iloc[i - 2]
+        c3 = df.iloc[i]
+
+        # Bullish FVG: c3 low > c1 high (gap up)
+        if c3["Low"] > c1["High"]:
+            lo  = float(c1["High"])
+            hi  = float(c3["Low"])
+            mid = (lo + hi) / 2
+            fvgs.append({"type": "bull", "hi": hi, "lo": lo, "mid": mid,
+                         "size": hi - lo, "timeframe": timeframe,
+                         "dist_pct": abs(mid - current_price) / current_price * 100,
+                         "is_above": mid > current_price})
+
+        # Bearish FVG: c3 high < c1 low (gap down)
+        if c3["High"] < c1["Low"]:
+            lo  = float(c3["High"])
+            hi  = float(c1["Low"])
+            mid = (lo + hi) / 2
+            fvgs.append({"type": "bear", "hi": hi, "lo": lo, "mid": mid,
+                         "size": hi - lo, "timeframe": timeframe,
+                         "dist_pct": abs(mid - current_price) / current_price * 100,
+                         "is_above": mid > current_price})
+
+    # Keep only unfilled (price hasn't traded back through)
+    unfilled = [f for f in fvgs if
+                (f["type"] == "bull" and current_price < f["hi"]) or
+                (f["type"] == "bear" and current_price > f["lo"])]
+    unfilled.sort(key=lambda x: x["dist_pct"])
+    return unfilled[:6]
+
+
 def who_leads(a: np.ndarray, b: np.ndarray) -> str:
     n = min(len(a), len(b))
     if n < 6:
