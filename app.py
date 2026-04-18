@@ -1,11 +1,10 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import numpy as np
 import plotly.graph_objects as go
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 
-from lib.market_data import SYMBOLS, TV_SYMBOLS, get_candles, get_quotes
+from lib.market_data import SYMBOLS, get_candles, get_quotes
 from lib.ict_analysis import (
     get_session, find_equal_hl, detect_gap_fib,
     find_imbalances, find_fvg, pearson, returns, who_leads
@@ -290,41 +289,14 @@ with tab_charts:
         price = q.get("price", 0)
         dec   = cfg["decimals"]
 
-        # embed-widget-advanced-chart.js WITHOUT async so document.currentScript
-        # is available when the script runs and can read the JSON symbol config.
-        tv_html = f"""<!DOCTYPE html>
-<html><head>
-<style>
-  html,body{{margin:0;padding:0;background:#080810;overflow:hidden}}
-  .tradingview-widget-container,.tradingview-widget-container__widget{{height:500px;width:100%}}
-</style>
-</head><body>
-<div class="tradingview-widget-container">
-  <div class="tradingview-widget-container__widget"></div>
-  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js">
-  {{
-    "autosize": true,
-    "symbol": "{sym}",
-    "interval": "15",
-    "timezone": "America/New_York",
-    "theme": "dark",
-    "style": "1",
-    "locale": "en",
-    "backgroundColor": "rgba(8,8,16,1)",
-    "hide_top_toolbar": false,
-    "allow_symbol_change": false,
-    "save_image": false,
-    "calendar": false
-  }}
-  </script>
-</div>
-</body></html>"""
-
         with (col_left if idx % 2 == 0 else col_right):
-            st.markdown(f"**{cfg['label']}**")
-            components.html(tv_html, height=505, scrolling=False)
+            st.markdown(f"**{cfg['label']}** — 15m")
             if price > 0:
+                st.plotly_chart(make_chart(key, price, dec),
+                                use_container_width=True, config={"displayModeBar": False})
                 render_levels_fvg(key, price, dec)
+            else:
+                st.warning("No price data")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB 2 — LIQUIDITY
