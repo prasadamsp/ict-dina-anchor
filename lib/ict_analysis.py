@@ -8,15 +8,15 @@ NY_TZ = pytz.timezone("America/New_York")
 # ── Session ──────────────────────────────────────────────────────────────────
 
 SESSION_PHASES = [
-    (0,   3*60,       "asian",         "🌙 Asian Session",                "#6366f1", "Building liquidity"),
-    (3*60, 8*60,      "london",        "🇬🇧 London Session",               "#8b5cf6", "London sweep in play"),
-    (8*60, 8*60+30,   "pre_news",      "⏰ Pre-News",                      "#f59e0b", "Mark equal H/L on 5m/15m/1h now"),
-    (8*60+30, 9*60+30,"news_to_open",  "🔫 Liquidity Sweep Zone",         "#ef4444", "8:30–9:30 NY — equal H/L targets active"),
-    (9*60+30, 10*60,  "opening_range", "📈 Opening Range",                 "#f97316", "Mark RTH open — first 30min range"),
-    (10*60, 11*60,    "silver_bullet", "🎯 Silver Bullet / 2022 Model",    "#22c55e", "After 10am — attack remaining liquidity"),
-    (11*60, 14*60,    "ny_midday",     "😴 NY Midday",                     "#64748b", "Low volatility — avoid overtrading"),
-    (14*60, 16*60+15, "ny_close",      "🔔 NY Close",                      "#94a3b8", "Mark 4:15pm ETH close for tomorrow"),
-    (16*60+15, 24*60, "after_hours",   "🌃 After Hours / ETH",             "#475569", "Electronic trading hours"),
+    (0,   3*60,       "asian",         "Asian Session",                "#6366f1", "Building liquidity"),
+    (3*60, 8*60,      "london",        "London Session",               "#8b5cf6", "London sweep in play"),
+    (8*60, 8*60+30,   "pre_news",      "Pre-News",                     "#f59e0b", "Mark equal H/L on 5m/15m/1h now"),
+    (8*60+30, 9*60+30,"news_to_open",  "Liquidity Sweep Zone",         "#ef4444", "8:30-9:30 NY — equal H/L targets active"),
+    (9*60+30, 10*60,  "opening_range", "Opening Range",                "#f97316", "Mark RTH open — first 30min range"),
+    (10*60, 11*60,    "silver_bullet", "Silver Bullet / 2022 Model",   "#22c55e", "After 10am — attack remaining liquidity"),
+    (11*60, 14*60,    "ny_midday",     "NY Midday",                    "#64748b", "Low volatility — avoid overtrading"),
+    (14*60, 16*60+15, "ny_close",      "NY Close",                     "#94a3b8", "Mark 4:15pm ETH close for tomorrow"),
+    (16*60+15, 24*60, "after_hours",   "After Hours / ETH",            "#475569", "Electronic trading hours"),
 ]
 
 KEY_TIMES = [
