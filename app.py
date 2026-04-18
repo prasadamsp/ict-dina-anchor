@@ -12,7 +12,7 @@ from lib.ict_analysis import (
 
 def make_chart(key: str, price: float, dec: int) -> go.Figure:
     cfg = SYMBOLS[key]
-    df  = get_candles(cfg["yahoo"], "15m", "5d")
+    df  = get_candles(cfg["yahoo"], "15m", "3d")
     if df.empty:
         fig = go.Figure()
         fig.add_annotation(text="No data", x=0.5, y=0.5, showarrow=False,
@@ -20,55 +20,65 @@ def make_chart(key: str, price: float, dec: int) -> go.Figure:
         fig.update_layout(paper_bgcolor="#080810", plot_bgcolor="#080810", height=480)
         return fig
 
-    df15 = df
     df1h = get_candles(cfg["yahoo"], "1h", "15d")
 
-    levels = find_equal_hl(df15, "15m", price) + find_equal_hl(df1h, "1h", price)
+    levels = find_equal_hl(df, "15m", price) + find_equal_hl(df1h, "1h", price)
     levels.sort(key=lambda x: x["dist_pct"])
-    levels = levels[:8]
+    levels = levels[:6]
 
-    fvgs = find_fvg(df15, "15m", price) + find_fvg(df1h, "1h", price)
+    fvgs = find_fvg(df, "15m", price) + find_fvg(df1h, "1h", price)
     fvgs.sort(key=lambda x: x["dist_pct"])
-    fvgs = fvgs[:6]
+    fvgs = fvgs[:4]
+
+    # Clean x-axis labels: show "Apr 17 14:30" format
+    x_labels = [t.strftime("%b %d %H:%M") if hasattr(t, "strftime")
+                else str(t)[:16] for t in df.index]
 
     fig = go.Figure()
 
-    # FVG shading (behind candles)
+    # FVG shading
     for f in fvgs:
-        color = "rgba(34,197,94,0.08)" if f["type"] == "bull" else "rgba(239,68,68,0.08)"
-        border = "rgba(34,197,94,0.3)" if f["type"] == "bull" else "rgba(239,68,68,0.3)"
+        color  = "rgba(34,197,94,0.10)"  if f["type"] == "bull" else "rgba(239,68,68,0.10)"
+        border = "rgba(34,197,94,0.35)"  if f["type"] == "bull" else "rgba(239,68,68,0.35)"
         fig.add_hrect(y0=f["lo"], y1=f["hi"],
                       fillcolor=color, line=dict(color=border, width=1), layer="below")
 
     # Candlesticks
     fig.add_trace(go.Candlestick(
-        x=df.index, open=df["Open"], high=df["High"], low=df["Low"], close=df["Close"],
+        x=x_labels, open=df["Open"], high=df["High"], low=df["Low"], close=df["Close"],
         increasing=dict(fillcolor="#22c55e", line=dict(color="#22c55e", width=1)),
         decreasing=dict(fillcolor="#ef4444", line=dict(color="#ef4444", width=1)),
         name=cfg["label"], showlegend=False,
     ))
 
-    # EQH/EQL lines
-    for lv in levels:
+    # EQH/EQL lines — only 3 closest above and 3 below to avoid clutter
+    above = [l for l in levels if l["is_above"]][:3]
+    below = [l for l in levels if not l["is_above"]][:3]
+    for lv in above + below:
         col = "#ef4444" if lv["type"] == "EQH" else "#22c55e"
         fig.add_hline(y=lv["price"], line=dict(color=col, width=1, dash="dot"),
-                      annotation_text=f"{lv['type']} {lv['timeframe']}",
+                      annotation_text=f"{lv['type']}",
                       annotation_font=dict(color=col, size=10),
                       annotation_position="right")
 
     # Current price line
     fig.add_hline(y=price, line=dict(color="#f59e0b", width=1.5, dash="dash"))
 
+    # Show only ~8 evenly spaced x ticks
+    n = len(x_labels)
+    step = max(1, n // 8)
+    tick_vals = x_labels[::step]
+
     fig.update_layout(
         height=480,
         paper_bgcolor="#080810",
         plot_bgcolor="#0d0d1a",
-        margin=dict(l=10, r=80, t=10, b=10),
+        margin=dict(l=10, r=70, t=10, b=40),
         xaxis=dict(
             showgrid=True, gridcolor="#1e1e32", color="#6b7280",
             rangeslider=dict(visible=False),
-            type="category", tickangle=-45,
-            nticks=10,
+            tickangle=-30, tickfont=dict(size=10),
+            tickmode="array", tickvals=tick_vals,
         ),
         yaxis=dict(showgrid=True, gridcolor="#1e1e32", color="#6b7280",
                    tickformat=f".{dec}f", side="right"),
