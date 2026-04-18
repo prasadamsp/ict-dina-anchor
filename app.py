@@ -224,28 +224,30 @@ with tab_charts:
         dec   = cfg["decimals"]
 
         widget_html = f"""
-        <div class="tradingview-widget-container" style="height:520px;border-radius:10px 10px 0 0;overflow:hidden">
-          <div class="tradingview-widget-container__widget" style="height:100%"></div>
-          <script type="text/javascript"
-            src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
-          {{
-            "autosize": true,
-            "symbol": "{sym}",
-            "interval": "15",
-            "timezone": "America/New_York",
-            "theme": "dark",
-            "style": "1",
-            "locale": "en",
-            "backgroundColor": "rgba(8,8,16,1)",
-            "gridColor": "rgba(26,26,46,1)",
-            "hide_top_toolbar": false,
-            "allow_symbol_change": false,
-            "save_image": false,
-            "calendar": false,
-            "support_host": "https://www.tradingview.com"
-          }}
-          </script>
-        </div>"""
+        <div id="tv_{key}" style="width:100%;height:520px;border-radius:10px 10px 0 0;overflow:hidden"></div>
+        <script type="text/javascript">
+        (function() {{
+          var s = document.createElement('script');
+          s.src = 'https://s3.tradingview.com/tv.js';
+          s.onload = function() {{
+            new TradingView.widget({{
+              "container_id": "tv_{key}",
+              "autosize": true,
+              "symbol": "{sym}",
+              "interval": "15",
+              "timezone": "America/New_York",
+              "theme": "dark",
+              "style": "1",
+              "locale": "en",
+              "toolbar_bg": "#080810",
+              "hide_top_toolbar": false,
+              "allow_symbol_change": false,
+              "save_image": false
+            }});
+          }};
+          document.head.appendChild(s);
+        }})();
+        </script>"""
 
         with (col_left if idx % 2 == 0 else col_right):
             st.markdown(f"**{cfg['label']}**")
