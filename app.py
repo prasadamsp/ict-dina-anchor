@@ -290,33 +290,34 @@ with tab_charts:
         price = q.get("price", 0)
         dec   = cfg["decimals"]
 
-        # Full HTML document — tv.js loaded synchronously so TradingView global
-        # is available when the second script block runs.
+        # embed-widget-advanced-chart.js WITHOUT async so document.currentScript
+        # is available when the script runs and can read the JSON symbol config.
         tv_html = f"""<!DOCTYPE html>
 <html><head>
 <style>
   html,body{{margin:0;padding:0;background:#080810;overflow:hidden}}
-  #chart{{width:100%;height:500px}}
+  .tradingview-widget-container,.tradingview-widget-container__widget{{height:500px;width:100%}}
 </style>
 </head><body>
-<div id="chart"></div>
-<script src="https://s3.tradingview.com/tv.js"></script>
-<script>
-new TradingView.widget({{
-  container_id: "chart",
-  autosize: true,
-  symbol: "{sym}",
-  interval: "15",
-  timezone: "America/New_York",
-  theme: "dark",
-  style: "1",
-  locale: "en",
-  toolbar_bg: "#080810",
-  hide_top_toolbar: false,
-  allow_symbol_change: false,
-  save_image: false
-}});
-</script>
+<div class="tradingview-widget-container">
+  <div class="tradingview-widget-container__widget"></div>
+  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js">
+  {{
+    "autosize": true,
+    "symbol": "{sym}",
+    "interval": "15",
+    "timezone": "America/New_York",
+    "theme": "dark",
+    "style": "1",
+    "locale": "en",
+    "backgroundColor": "rgba(8,8,16,1)",
+    "hide_top_toolbar": false,
+    "allow_symbol_change": false,
+    "save_image": false,
+    "calendar": false
+  }}
+  </script>
+</div>
 </body></html>"""
 
         with (col_left if idx % 2 == 0 else col_right):
